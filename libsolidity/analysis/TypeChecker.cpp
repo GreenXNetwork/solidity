@@ -1238,17 +1238,35 @@ bool TypeChecker::visit(VariableDeclarationStatement const& _statement)
 				}
 				else
 					solAssert(dynamic_cast<FixedPointType const*>(var.annotation().type.get()), "Unknown type.");
-
-				m_errorReporter.warning(
-					_statement.location(),
-					"The type of this variable was inferred as " +
-					typeName +
-					extension +
-					". This is probably not desired. Use an explicit type to silence this warning."
-				);
 			}
 
 			var.accept(*this);
+
+			bool typeCanBeExpressed = true;
+			if (auto functionType = dynamic_cast<FunctionType const*>(var.annotation().type.get()))
+			{
+				// function types of kind internal & external have a grammar but none of the others
+				if (
+					functionType->kind() != FunctionType::Kind::Internal &&
+					functionType->kind() != FunctionType::Kind::External
+				)
+					typeCanBeExpressed = false;
+			}
+
+			if (typeCanBeExpressed)
+			{
+				// TODO: also print the storage
+				string typeName = var.annotation().type->toString(true);
+				m_errorReporter.syntaxError(var.location(),
+					"Use of the \"var\" keyword is disallowed. "
+					"Use explicit type `" + typeName + "' instead.");
+			}
+			else
+			{
+				m_errorReporter.syntaxError(var.location(),
+					"Use of the \"var\" keyword is disallowed. "
+					"Type cannot be expressed in syntax.");
+			}
 		}
 		else
 		{
