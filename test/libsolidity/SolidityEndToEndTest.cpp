@@ -7894,6 +7894,7 @@ BOOST_AUTO_TEST_CASE(tuples)
 	char const* sourceCode = R"(
 		contract C {
 			uint[] data;
+			uint[] m_c;
 			function g() internal returns (uint a, uint b, uint[] storage c) {
 				return (1, 2, data);
 			}
@@ -7906,7 +7907,7 @@ BOOST_AUTO_TEST_CASE(tuples)
 				uint a; uint b;
 				(a, b) = this.h();
 				if (a != 5 || b != 6) return 1;
-				uint[] storage c;
+				uint[] storage c = m_c;
 				(a, b, c) = g();
 				if (a != 1 || b != 2 || c[0] != 3) return 2;
 				(a, b) = (b, a);
@@ -9615,27 +9616,6 @@ BOOST_AUTO_TEST_CASE(calling_uninitialized_function_in_detail)
 	ABI_CHECK(callContractFunction("t()"), encodeArgs());
 }
 
-BOOST_AUTO_TEST_CASE(calling_uninitialized_function_through_array)
-{
-	char const* sourceCode = R"(
-		contract C {
-			int mutex;
-			function t() returns (uint) {
-				if (mutex > 0)
-					{ assembly { mstore(0, 7) return(0, 0x20) } }
-				mutex = 1;
-				// Avoid re-executing this function if we jump somewhere.
-				function() internal returns (uint)[200] x;
-				x[0]();
-				return 2;
-			}
-		}
-	)";
-
-	compileAndRun(sourceCode, 0, "C");
-	ABI_CHECK(callContractFunction("t()"), encodeArgs());
-}
-
 BOOST_AUTO_TEST_CASE(pass_function_types_internally)
 {
 	char const* sourceCode = R"(
@@ -10145,33 +10125,6 @@ BOOST_AUTO_TEST_CASE(external_function_to_address)
 	ABI_CHECK(callContractFunction("g(function)", fromHex("00000000000000000000000000000000000004226121ff00000000000000000")), encodeArgs(u160(0x42)));
 }
 
-
-BOOST_AUTO_TEST_CASE(copy_internal_function_array_to_storage)
-{
-	char const* sourceCode = R"(
-		contract C {
-			function() internal returns (uint)[20] x;
-			int mutex;
-			function one() returns (uint) {
-				function() internal returns (uint)[20] xmem;
-				x = xmem;
-				return 3;
-			}
-			function two() returns (uint) {
-				if (mutex > 0)
-					return 7;
-				mutex = 1;
-				// If this test fails, it might re-execute this function.
-				x[0]();
-				return 2;
-			}
-		}
-	)";
-
-	compileAndRun(sourceCode, 0, "C");
-	ABI_CHECK(callContractFunction("one()"), encodeArgs(u256(3)));
-	ABI_CHECK(callContractFunction("two()"), encodeArgs());
-}
 
 BOOST_AUTO_TEST_CASE(shift_constant_left)
 {

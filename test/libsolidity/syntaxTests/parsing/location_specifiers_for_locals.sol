@@ -1,11 +1,10 @@
 contract Foo {
-    function f() public {
-        uint[] storage x;
+    uint[] m_x;
+    function f() public view {
+        uint[] storage x = m_x;
         uint[] memory y;
     }
 }
 // ----
-// Warning: (49-65): Uninitialized storage pointer.
-// Warning: (49-65): Unused local variable.
-// Warning: (75-90): Unused local variable.
-// Warning: (19-97): Function state mutability can be restricted to pure
+// Warning: (70-86): Unused local variable.
+// Warning: (102-117): Unused local variable.
